@@ -1,0 +1,21 @@
+# Secret API Keys & Environment Variables (Sabse Zaroori)
+.env
+
+# Python Virtual Environment & Cache
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local Databases & Generated Files
+*.db
+*.sqlite
+*.sqlite3
+data/
+reports/
+
+# IDE & OS Files
+.vscode/
+.DS_Store
+Thumbs.db
