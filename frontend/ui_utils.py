@@ -88,7 +88,7 @@ def status_badge(status: str) -> str:
     clean = (status or "pending").lower()
     return f'<span class="badge badge-{clean}">{clean.replace("_", " ")}</span>'
 
-
+@st.cache_data(ttl=20, show_spinner=False)
 def api_get(endpoint: str, timeout: int = 90):
     try:
         resp = requests.get(f"{BACKEND_URL}{endpoint}", timeout=timeout)
