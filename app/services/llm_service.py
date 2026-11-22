@@ -12,7 +12,7 @@ class LLMService:
         else:
             genai.configure(api_key=settings.gemini_api_key)
             self.available_models = self._detect_available_models()
-            self.model_name = self.available_models[0] if self.available_models else "gemini-2.5-pro"
+            self.model_name = self.available_models[0] if self.available_models else "gemini-2.5-flash"
 
     def _detect_available_models(self) -> list[str]:
         try:
@@ -33,10 +33,10 @@ class LLMService:
                 if m not in ordered:
                     ordered.append(m)
             logger.info(f"Detected active Gemini fallback chain: {ordered[:5]}")
-            return ordered if ordered else ["gemini-2.5-pro"]
+            return ordered if ordered else ["gemini-2.5-flash"]
         except Exception as e:
             logger.error(f"Could not list Gemini models: {str(e)}")
-            return ["gemini-2.5-pro"]
+            return ["gemini-2.5-flash"]
 
     def generate_text(self, prompt: str, system_instruction: str = None, temperature: float = 0.3) -> str:
         if not self.available_models:
