@@ -89,7 +89,7 @@ def status_badge(status: str) -> str:
     return f'<span class="badge badge-{clean}">{clean.replace("_", " ")}</span>'
 
 
-def api_get(endpoint: str, timeout: int = 15):
+def api_get(endpoint: str, timeout: int = 90):
     try:
         resp = requests.get(f"{BACKEND_URL}{endpoint}", timeout=timeout)
         if resp.status_code == 200:
