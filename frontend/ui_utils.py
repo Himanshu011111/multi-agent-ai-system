@@ -120,7 +120,7 @@ def api_post(endpoint: str, json_data: dict = None, files: dict = None, timeout:
 
 def fetch_file_bytes(endpoint: str) -> bytes | None:
     try:
-        resp = requests.get(f"{BACKEND_URL}{endpoint}", timeout=30)
+        resp = requests.get(f"{BACKEND_URL}{endpoint}", timeout=90)
         if resp.status_code == 200:
             return resp.content
         return None
