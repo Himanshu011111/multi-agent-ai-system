@@ -12,8 +12,7 @@ except ImportError:
 
 class GeminiAPIEmbeddings(Embeddings):
     """
-    Lightweight cloud-based Gemini API embeddings.
-    Eliminates heavy PyTorch/HuggingFace RAM overhead (~400MB saved on Render).
+    Lightweight batch Gemini API embeddings (zero local PyTorch/ONNX RAM overhead).
     """
 
     def __init__(self, api_key: str):
@@ -32,19 +31,32 @@ class GeminiAPIEmbeddings(Embeddings):
         return "models/text-embedding-004"
 
     def embed_documents(self, texts: List[str]) -> List[List[float]]:
-        vectors: List[List[float]] = []
-        for text in texts:
-            clean_text = (text or " ").strip()[:8000]
+        if not texts:
+            return []
+        clean_texts = [(t or " ").strip()[:6000] for t in texts]
+        try:
             res = genai.embed_content(
                 model=self.model_name,
-                content=clean_text,
+                content=clean_texts,
                 task_type="retrieval_document",
             )
-            vectors.append(res["embedding"])
-        return vectors
+            embeddings = res["embedding"]
+            if embeddings and isinstance(embeddings[0], float):
+                return [embeddings]
+            return embeddings
+        except Exception:
+            vectors: List[List[float]] = []
+            for text in clean_texts:
+                res = genai.embed_content(
+                    model=self.model_name,
+                    content=text,
+                    task_type="retrieval_document",
+                )
+                vectors.append(res["embedding"])
+            return vectors
 
     def embed_query(self, text: str) -> List[float]:
-        clean_text = (text or " ").strip()[:8000]
+        clean_text = (text or " ").strip()[:6000]
         res = genai.embed_content(
             model=self.model_name,
             content=clean_text,

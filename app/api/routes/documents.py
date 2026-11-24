@@ -1,4 +1,5 @@
 import os
+import gc 
 from pathlib import Path
 from typing import List
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
@@ -48,6 +49,8 @@ async def upload_document(
     try:
         with open(destination_path, "wb") as f:
             f.write(content)
+            del content
+            gc.collect()
 
         # Process and index document into ChromaDB vector store
         indexed = document_service.process_file(str(destination_path), safe_filename)
