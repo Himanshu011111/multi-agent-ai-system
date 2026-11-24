@@ -7,6 +7,7 @@ from frontend.ui_utils import (
     api_post,
     fetch_file_bytes,
 )
+from app.services.pptx_service import build_executive_pptx
 
 st.set_page_config(page_title="Reports & Analytics", page_icon="📊", layout="wide")
 apply_saas_styling()
@@ -144,3 +145,27 @@ with custom_col:
                 else:
                     st.success(f"Generated {rep_format.upper()} report successfully!")
                     st.rerun()
+                    st.divider()
+st.subheader("📊 One-Click Executive Presentation (.PPTX) Export")
+if tasks:
+    pptx_map = {f"#{t['id']} — {t['title'][:45]}": t for t in tasks}
+    chosen_pptx_label = st.selectbox("Choose Completed Task for Slide Deck", list(pptx_map.keys()), key="pptx_sel")
+    chosen_t = pptx_map[chosen_pptx_label]
+    orch = chosen_t.get("orchestration_details") or {}
+    report_body = (
+        orch.get("final_report")
+        or orch.get("report")
+        or orch.get("summary")
+        or chosen_t.get("description", "")
+    )
+    pptx_bytes = build_executive_pptx(
+        title=chosen_t["title"],
+        content=report_body,
+        qa_score=float(chosen_t.get("quality_score") or 85.0),
+    )
+    st.download_button(
+        label="📥 Download Executive PowerPoint Deck (.pptx)",
+        data=pptx_bytes,
+        file_name=f"Task_{chosen_t['id']}_Executive_Deck.pptx",
+        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    )

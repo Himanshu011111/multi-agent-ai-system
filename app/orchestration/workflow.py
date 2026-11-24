@@ -116,7 +116,7 @@ class WorkflowManager:
                         format="docx",
                     )
                 )
-                # Run Enterprise Critic Agent Quality Audit
+            # Run Enterprise Critic Agent Quality Audit + Self-Correction Loop
             report_text = (
                 final_state.get("final_report")
                 or final_state.get("report")
@@ -128,17 +128,50 @@ class WorkflowManager:
                 quality_review = self.critic_agent.evaluate(
                     topic=task.title,
                     draft_report=report_text,
+                    threshold=80,
                 )
+
+                # Self-Correction: Rewrite once if quality score < 80
+                if not quality_review.get("passed", True) and quality_review.get("revision_instructions"):
+                    logger.info(
+                        f"Task #{task_id} scored {quality_review.get('overall_score')}/100 (<80). Running Critic self-correction..."
+                    )
+                    refine_prompt = (
+                        f"Topic: {task.title}\n\n"
+                        f"Critic Revision Instructions: {quality_review['revision_instructions']}\n"
+                        f"Missing Gaps to Address: {', '.join(quality_review.get('missing_gaps', []))}\n\n"
+                        f"Original Draft:\n{report_text[:6000]}\n\n"
+                        "Rewrite and upgrade this report into a comprehensive, well-structured enterprise document addressing all gaps above."
+                    )
+                    improved_report = self.critic_agent.llm.generate_text(
+                        prompt=refine_prompt,
+                        system_instruction="You are an Executive Research Editor. Produce a polished, accurate, structured report.",
+                        temperature=0.3,
+                    )
+                    if improved_report and len(improved_report.strip()) > 100:
+                        report_text = improved_report.strip()
+                        for key in ("final_report", "report", "draft_report", "summary"):
+                            if key in final_state:
+                                final_state[key] = report_text
+                        quality_review = self.critic_agent.evaluate(
+                            topic=task.title,
+                            draft_report=report_text,
+                            threshold=80,
+                        )
+                        quality_review["self_corrected"] = True
+
                 final_state["quality_review"] = quality_review
                 final_state["quality_score"] = float(
                     quality_review.get("overall_score", final_state.get("quality_score", 85.0))
                 )
                 strengths = ", ".join(quality_review.get("strengths", []))
                 if strengths:
+                    tag = " [Auto-Refined]" if quality_review.get("self_corrected") else ""
                     final_state["quality_explanation"] = (
-                        f"Critic Audit ({quality_review.get('overall_score', 85)}/100): {strengths}"
+                        f"Critic Audit ({quality_review.get('overall_score', 85)}/100){tag}: {strengths}"
                     )
                 self.task_results_cache[task_id] = dict(final_state)
+
 
             task.task_type = final_state.get("task_type", task.task_type)
             task.quality_score = final_state.get("quality_score", 85.0)

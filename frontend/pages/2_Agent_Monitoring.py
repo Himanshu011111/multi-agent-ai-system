@@ -18,6 +18,60 @@ if err:
     st.stop()
 
 agents = data.get("agents", [])
+# --- Upgrade #4: Live LangGraph Topology Flowchart & Telemetry ---
+st.subheader("🔀 Live LangGraph Agent Execution Topology")
+tasks_list, _ = api_get("/api/tasks/")
+if tasks_list:
+    task_options = {
+        f"#{t['id']} — {t.get('title', 'Untitled')[:45]} ({t.get('status', 'pending').upper()})": t
+        for t in tasks_list
+    }
+    selected_label = st.selectbox("Select Execution Run to Inspect", list(task_options.keys()))
+    selected_task = task_options[selected_label]
+    t_status = selected_task.get("status", "pending")
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Run Status", t_status.replace("_", " ").title())
+    k2.metric("Total Latency", f"{float(selected_task.get('execution_duration') or 0.0):.2f}s")
+    k3.metric("Critic QA Score", f"{float(selected_task.get('quality_score') or 0.0):.0f}/100")
+    k4.metric("Workflow Mode", selected_task.get("task_type", "research").replace("_", " ").title())
+else:
+    t_status = "idle"
+    st.caption("Run a task in **1_Task_Workspace** to inspect live run latency and Critic QA metrics.")
+
+
+def _node_color(done: bool, active: bool = False, failed: bool = False) -> str:
+    if failed:
+        return "#dc2626"
+    if active:
+        return "#2563eb"
+    return "#16a34a" if done else "#475569"
+
+
+is_done = t_status == "completed"
+is_hitl = t_status == "needs_approval"
+is_run = t_status == "running"
+is_fail = t_status == "failed"
+
+dot_graph = f"""
+digraph AgentPipeline {{
+    rankdir=LR;
+    bgcolor="transparent";
+    node [shape=box, style="rounded,filled", fontname="Helvetica", fontcolor="white", fontsize=11, margin="0.16,0.10"];
+    edge [color="#94a3b8", penwidth=1.5];
+
+    Planner [label="1. Planner Agent\\n(Task Breakdown)", fillcolor="{_node_color(is_done or is_hitl or is_run, failed=is_fail)}"];
+    HITL [label="2. HITL Gate\\n(Human Approval)", fillcolor="{_node_color(is_done, active=is_hitl)}"];
+    Researcher [label="3. Researcher & RAG\\n(Web + Vector Search)", fillcolor="{_node_color(is_done, active=is_run)}"];
+    Analyst [label="4. Analyst Agent\\n(Data Synthesis)", fillcolor="{_node_color(is_done)}"];
+    Writer [label="5. Writer Agent\\n(Report Drafting)", fillcolor="{_node_color(is_done)}"];
+    Critic [label="6. Critic QA Agent\\n(Self-Correction Audit)", fillcolor="{_node_color(is_done)}"];
+
+    Planner -> HITL -> Researcher -> Analyst -> Writer -> Critic;
+}}
+"""
+st.graphviz_chart(dot_graph, use_container_width=True)
+st.divider()
 
 # Display Agent Cards in a 2-column responsive grid
 cols = st.columns(2)
