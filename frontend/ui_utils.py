@@ -1,8 +1,31 @@
 import os
 import requests
+from requests.adapters import HTTPAdapter
 import streamlit as st
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+
+def _resolve_backend_url() -> str:
+    url = os.getenv("BACKEND_URL")
+    if not url:
+        try:
+            url = st.secrets.get("BACKEND_URL")
+        except Exception:
+            url = None
+    return (url or "http://127.0.0.1:8000").rstrip("/")
+
+
+BACKEND_URL = _resolve_backend_url()
+
+
+@st.cache_resource
+def _get_http_session() -> requests.Session:
+    """Persistent Keep-Alive + GZip HTTP session to eliminate SSL handshake lag."""
+    session = requests.Session()
+    adapter = HTTPAdapter(pool_connections=10, pool_maxsize=20)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    session.headers.update({"Accept-Encoding": "gzip, deflate"})
+    return session
 
 
 def apply_saas_styling():
@@ -88,39 +111,62 @@ def status_badge(status: str) -> str:
     clean = (status or "pending").lower()
     return f'<span class="badge badge-{clean}">{clean.replace("_", " ")}</span>'
 
-@st.cache_data(ttl=20, show_spinner=False)
+
+@st.cache_data(ttl=30, show_spinner=False)
+def _fetch_json_cached(endpoint: str, timeout: int):
+    session = _get_http_session()
+    resp = session.get(f"{BACKEND_URL}{endpoint}", timeout=timeout)
+    if resp.status_code == 200:
+        return resp.json()
+    raise RuntimeError(f"API Error ({resp.status_code}): {resp.text}")
+
+
 def api_get(endpoint: str, timeout: int = 90):
+    """Fast pooled GET with 30s caching (errors are never cached; live status stays fresh)."""
     try:
-        resp = requests.get(f"{BACKEND_URL}{endpoint}", timeout=timeout)
-        if resp.status_code == 200:
-            return resp.json(), None
-        return None, f"API Error ({resp.status_code}): {resp.text}"
+        if "/status" in endpoint:
+            session = _get_http_session()
+            resp = session.get(f"{BACKEND_URL}{endpoint}", timeout=timeout)
+            if resp.status_code == 200:
+                return resp.json(), None
+            return None, f"API Error ({resp.status_code}): {resp.text}"
+
+        return _fetch_json_cached(endpoint, timeout), None
     except requests.exceptions.ConnectionError:
-        return None, "Cannot connect to FastAPI Backend at http://127.0.0.1:8000. Ensure Uvicorn is running."
+        return None, f"Cannot connect to FastAPI Backend at {BACKEND_URL}. Ensure the server is running."
     except Exception as e:
         return None, str(e)
 
 
+api_get.clear = _fetch_json_cached.clear
+
+
 def api_post(endpoint: str, json_data: dict = None, files: dict = None, timeout: int = 180):
+    """Fast pooled POST that auto-refreshes cached GET data on success."""
     try:
-        resp = requests.post(
+        session = _get_http_session()
+        resp = session.post(
             f"{BACKEND_URL}{endpoint}",
             json=json_data,
             files=files,
             timeout=timeout,
         )
         if resp.status_code in (200, 201):
+            _fetch_json_cached.clear()
             return resp.json(), None
         return None, f"API Error ({resp.status_code}): {resp.text}"
     except requests.exceptions.ConnectionError:
-        return None, "Cannot connect to FastAPI Backend at http://127.0.0.1:8000. Ensure Uvicorn is running."
+        return None, f"Cannot connect to FastAPI Backend at {BACKEND_URL}. Ensure the server is running."
     except Exception as e:
         return None, str(e)
 
 
+@st.cache_data(ttl=300, show_spinner=False)
 def fetch_file_bytes(endpoint: str) -> bytes | None:
+    """Cached binary fetcher so PDF/DOCX downloads don't slow down page reruns."""
     try:
-        resp = requests.get(f"{BACKEND_URL}{endpoint}", timeout=90)
+        session = _get_http_session()
+        resp = session.get(f"{BACKEND_URL}{endpoint}", timeout=90)
         if resp.status_code == 200:
             return resp.content
         return None
