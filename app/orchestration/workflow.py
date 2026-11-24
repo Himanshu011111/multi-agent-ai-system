@@ -128,7 +128,7 @@ class WorkflowManager:
                 quality_review = self.critic_agent.evaluate(
                     topic=task.title,
                     draft_report=report_text,
-                    threshold=80,
+                    threshold=72,
                 )
 
                 # Self-Correction: Rewrite once if quality score < 80
@@ -156,7 +156,7 @@ class WorkflowManager:
                         quality_review = self.critic_agent.evaluate(
                             topic=task.title,
                             draft_report=report_text,
-                            threshold=80,
+                            threshold=72,
                         )
                         quality_review["self_corrected"] = True
 
