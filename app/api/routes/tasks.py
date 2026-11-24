@@ -71,6 +71,7 @@ async def execute_task_workflow(
     db.refresh(task)
     response_obj = TaskResponse.model_validate(task)
     response_obj.orchestration_details = state_result
+    response_obj.quality_review = state_result.get("quality_review")
     return response_obj
 
 
@@ -88,6 +89,7 @@ async def approve_sensitive_task(task_id: int, db: Session = Depends(get_db)):
     db.refresh(task)
     response_obj = TaskResponse.model_validate(task)
     response_obj.orchestration_details = state_result
+    response_obj.quality_review = state_result.get("quality_review")
     return response_obj
 
 
@@ -109,6 +111,7 @@ def list_all_tasks(db: Session = Depends(get_db)):
     for t in tasks:
         item = TaskResponse.model_validate(t)
         item.orchestration_details = workflow_manager.get_task_details(t.id)
+        item.quality_review = item.orchestration_details.get("quality_review")
         results.append(item)
     return results
 
@@ -130,4 +133,5 @@ def get_task_by_id(task_id: int, db: Session = Depends(get_db)):
 
     response_obj = TaskResponse.model_validate(task)
     response_obj.orchestration_details = workflow_manager.get_task_details(task_id)
+    response_obj.quality_review = response_obj.orchestration_details.get("quality_review")
     return response_obj

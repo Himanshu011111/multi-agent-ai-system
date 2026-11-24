@@ -11,12 +11,15 @@ from app.database.models import (
     GeneratedReportModel,
 )
 from app.utils.logger import logger
+from app.agents.critic_agent import CriticAgent
+from app.services.llm_service import LLMService
 
 
 class WorkflowManager:
     def __init__(self):
         # Cache latest full execution state per task_id for quick UI inspection
         self.task_results_cache: Dict[int, Dict[str, Any]] = {}
+        self.critic_agent = CriticAgent(LLMService())
 
     async def execute_task(
         self,
@@ -113,6 +116,29 @@ class WorkflowManager:
                         format="docx",
                     )
                 )
+                # Run Enterprise Critic Agent Quality Audit
+            report_text = (
+                final_state.get("final_report")
+                or final_state.get("report")
+                or final_state.get("draft_report")
+                or final_state.get("summary")
+                or ""
+            )
+            if report_text:
+                quality_review = self.critic_agent.evaluate(
+                    topic=task.title,
+                    draft_report=report_text,
+                )
+                final_state["quality_review"] = quality_review
+                final_state["quality_score"] = float(
+                    quality_review.get("overall_score", final_state.get("quality_score", 85.0))
+                )
+                strengths = ", ".join(quality_review.get("strengths", []))
+                if strengths:
+                    final_state["quality_explanation"] = (
+                        f"Critic Audit ({quality_review.get('overall_score', 85)}/100): {strengths}"
+                    )
+                self.task_results_cache[task_id] = dict(final_state)
 
             task.task_type = final_state.get("task_type", task.task_type)
             task.quality_score = final_state.get("quality_score", 85.0)

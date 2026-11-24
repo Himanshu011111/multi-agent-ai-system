@@ -61,6 +61,30 @@ else:
         )
         fig_pie.update_layout(height=350, margin=dict(l=20, r=20, t=30, b=20))
         st.plotly_chart(fig_pie, use_container_width=True)
+        st.divider()
+    st.subheader("🛡️ AI Quality & Factuality Audit")
+    task_map = {f"#{t['id']} — {t['title'][:45]}": t for t in tasks}
+    selected_label = st.selectbox("Select Task for Quality Audit", list(task_map.keys()))
+    selected_task = task_map[selected_label]
+
+    qr = selected_task.get("quality_review")
+    if isinstance(qr, dict):
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Overall Score", f"{qr.get('overall_score', 0)}/100")
+        c2.metric("Accuracy", f"{qr.get('accuracy_score', 0)}%")
+        c3.metric("Depth", f"{qr.get('depth_score', 0)}%")
+        c4.metric("Clarity", f"{qr.get('clarity_score', 0)}%")
+        st.progress(min(max(qr.get("overall_score", 0) / 100, 0.0), 1.0))
+
+        if qr.get("strengths"):
+            st.success("**Strengths:** " + " • ".join(qr["strengths"]))
+        if qr.get("missing_gaps"):
+            st.warning("**Areas to Improve:** " + " • ".join(qr["missing_gaps"]))
+    else:
+        base_score = float(selected_task.get("quality_score") or 0.0)
+        st.metric("Overall QA Score", f"{base_score:.0f}/100")
+        st.progress(min(max(base_score / 100, 0.0), 1.0))
+        st.caption("Detailed Critic Audit (Accuracy, Depth, Clarity) backend connect hone ke baad naye tasks mein dikhega.")
 
 st.divider()
 

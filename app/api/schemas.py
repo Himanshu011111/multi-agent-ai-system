@@ -67,6 +67,7 @@ class TaskResponse(BaseModel):
     sources: List[ResearchSourceResponse] = []
     reports: List[GeneratedReportResponse] = []
     orchestration_details: Dict[str, Any] = {}
+    quality_review: Optional[Dict[str, Any]] = None
 
     class Config:
         from_attributes = True
