@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Multi-Agent AI Research & Task Automation System API",
+    title="CritiMesh AI — Multi-Agent Research & Automation API",
     description=(
         "Enterprise FastAPI backend powering LangGraph multi-agent orchestration, "
         "Google Gemini LLM reasoning, ChromaDB RAG, and automated PDF/DOCX reporting."
@@ -47,7 +47,7 @@ app.include_router(reports.router)
 @app.get("/", tags=["Root"])
 def root():
     return {
-        "system": "Multi-Agent AI Research & Task Automation System",
+        "system": "CritiMesh — Critic-Audited Multi-Agent Research & Task Automation Engine",
         "status": "online",
         "docs_url": "/docs",
     }

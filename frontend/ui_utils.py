@@ -102,8 +102,8 @@ def apply_saas_styling():
     )
 
     with st.sidebar:
-        st.markdown("### 🤖 Multi-Agent AI Hub")
-        st.caption("Autonomous Research, RAG & Task Automation Platform")
+        st.markdown("### 🤖 CritiMesh")
+        st.caption("Critic-Audited Multi-Agent Research & Automation Mesh")
         st.divider()
 
 
