@@ -11,7 +11,7 @@ from app.utils.logger import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Starting Multi-Agent AI Research & Task Automation System Backend...")
+    logger.info("Starting CritiMesh — Multi-Agent AI Research & Automation Engine Backend...")
     init_db()
     logger.info("Database initialized successfully.")
     yield

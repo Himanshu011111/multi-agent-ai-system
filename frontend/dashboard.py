@@ -14,7 +14,7 @@ apply_saas_styling()
 st.markdown(
     """
     <div class="saas-card-dark">
-        <h2 style="margin:0; color:#ffffff;">Multi-Agent AI Research & Task Automation System</h2>
+        <h2 style="margin:0; color:#ffffff;">CritiMesh — Multi-Agent AI Research & Automation Engine</h2>
         <p style="margin-top:0.5rem; color:#cbd5e1; font-size:1rem;">
             Enterprise B.Tech CSE Major Project powered by <b>LangGraph Multi-Agent Orchestration</b>, 
             <b>Google Gemini Reasoning</b>, <b>ChromaDB RAG</b>, and <b>FastAPI</b>.
